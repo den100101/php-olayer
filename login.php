@@ -1,39 +1,80 @@
 <?php
-require "db.php";
+require_once __DIR__ . "/db.php";
+
 $message = "";
 
-if (isset($_POST["submit-btn"])) {
+// Temporary login debugging
+error_log("LOGIN PAGE LOADED");
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+  error_log("LOGIN FORM SUBMITTED");
+
   $username = trim($_POST["usernamelog"] ?? "");
   $password = $_POST["passwordlog"] ?? "";
 
-  $stmt = $conn->prepare("SELECT ID, USERNAME, PASSWORD, USERTYPE FROM tbl_account WHERE USERNAME = ? LIMIT 1");
-  $stmt->bind_param("s", $username);
-  $stmt->execute();
-  $result = $stmt->get_result();
+  error_log("LOGIN USERNAME: " . $username);
 
-  if ($row = $result->fetch_assoc()) {
-    if (password_verify($password, $row["PASSWORD"])) {
-      session_regenerate_id(true);
-      $_SESSION["USER_ID"] = (int)$row["ID"];
-      $_SESSION["USERNAME"] = $row["USERNAME"];
-      $_SESSION["USERTYPE"] = $row["USERTYPE"];
-      header("Location: tblcourse.php");
-      exit();
+  try {
+    $stmt = $conn->prepare(
+      "SELECT ID, USERNAME, PASSWORD, USERTYPE
+             FROM tbl_account
+             WHERE USERNAME = ?
+             LIMIT 1"
+    );
+
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+
+    $result = $stmt->get_result();
+
+    if ($row = $result->fetch_assoc()) {
+      error_log("ACCOUNT FOUND");
+
+      if (password_verify($password, $row["PASSWORD"])) {
+        error_log("PASSWORD VERIFIED");
+
+        session_regenerate_id(true);
+
+        $_SESSION["USER_ID"] = (int) $row["ID"];
+        $_SESSION["USERNAME"] = $row["USERNAME"];
+        $_SESSION["USERTYPE"] = $row["USERTYPE"];
+
+        error_log("SESSION CREATED");
+        error_log("LOGIN SUCCESSFUL");
+
+        header("Location: tblcourse.php");
+        exit();
+      } else {
+        error_log("PASSWORD VERIFICATION FAILED");
+      }
+    } else {
+      error_log("ACCOUNT NOT FOUND");
     }
+
+    $message = "Invalid username or password.";
+
+    $stmt->close();
+  } catch (Throwable $e) {
+    error_log("LOGIN ERROR: " . $e->getMessage());
+    $message = "Something went wrong during login. Please try again.";
   }
-  $message = "Invalid username or password.";
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <title>Login | Course Portal</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="style.css">
+
   <style>
     .auth-foot a {
       color: rgb(199, 8, 8);
@@ -48,59 +89,110 @@ if (isset($_POST["submit-btn"])) {
 </head>
 
 <body class="auth-page">
+
   <div class="auth">
+
     <section class="auth-card">
+
       <aside class="auth-side">
+
         <div class="brand-mark">CP</div>
+
         <p class="eyebrow">COURSE MANAGEMENT SYSTEM</p>
+
         <h1>Learning starts with the right tools.</h1>
-        <p class="side-copy">Sign in to access your courses and the tools available for your user role.</p>
-        <div class="side-note">Simple. Organized. Secure.</div>
+
+        <p class="side-copy">
+          Sign in to access your courses and the tools available for your user role.
+        </p>
+
+        <div class="side-note">
+          Simple. Organized. Secure.
+        </div>
+
       </aside>
 
       <main class="auth-form">
+
         <h2>Welcome back</h2>
-        <p class="sub">Enter your account details to continue.</p>
+
+        <p class="sub">
+          Enter your account details to continue.
+        </p>
 
         <?php if ($message): ?>
-          <div class="alert"><?= htmlspecialchars($message) ?></div>
+          <div class="alert">
+            <?= htmlspecialchars($message) ?>
+          </div>
         <?php endif; ?>
 
-        <form method="post" autocomplete="on">
+        <form method="POST" action="login.php" autocomplete="on">
+
           <div class="field">
+
             <label for="usernamelog">Username</label>
-            <input id="usernamelog" type="text" name="usernamelog" autocomplete="username" required>
+
+            <input
+              id="usernamelog"
+              type="text"
+              name="usernamelog"
+              autocomplete="username"
+              required>
+
           </div>
 
           <div class="field">
+
             <label for="pw">Password</label>
+
             <div class="password-wrap">
-              <input id="pw" type="password" name="passwordlog" autocomplete="current-password" required>
-              <button class="toggle" type="button" onclick="togglePassword('pw',this)" aria-label="Show password">Show</button>
+
+              <input
+                id="pw"
+                type="password"
+                name="passwordlog"
+                autocomplete="current-password"
+                required>
+
+              <button
+                class="toggle"
+                type="button"
+                onclick="togglePassword('pw', this)"
+                aria-label="Show password">
+                Show
+              </button>
+
             </div>
+
           </div>
 
           <button class="btn" type="submit" name="submit-btn">
             Sign in <span aria-hidden="true">→</span>
           </button>
+
         </form>
 
         <p class="auth-foot">
           Don't have an account?
           <a href="register.php">Create Account</a>
         </p>
+
       </main>
+
     </section>
+
   </div>
 
   <script>
     function togglePassword(id, button) {
       const input = document.getElementById(id);
+
       input.type = input.type === "password" ? "text" : "password";
+
       button.textContent = input.type === "password" ? "Show" : "Hide";
     }
   </script>
+
 </body>
 
 </html>
-```
