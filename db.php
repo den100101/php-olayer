@@ -75,6 +75,10 @@ try {
         if (!is_file($sslCa)) {
             throw new RuntimeException("Aiven CA certificate not found.");
         }
+        error_log("CA path: " . $sslCa);
+        error_log("CA exists: " . (file_exists($sslCa) ? "YES" : "NO"));
+        error_log("CA readable: " . (is_readable($sslCa) ? "YES" : "NO"));
+        error_log("CA size: " . (file_exists($sslCa) ? filesize($sslCa) : 0));
 
         $conn->ssl_set(null, null, $sslCa, null, null);
 
